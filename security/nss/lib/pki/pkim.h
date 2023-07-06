@@ -38,7 +38,7 @@
 #define PKIM_H
 
 #ifdef DEBUG
-static const char PKIM_CVS_ID[] = "@(#) $RCSfile: pkim.h,v $ $Revision: 1.27.2.2 $ $Date: 2007/11/16 05:25:08 $";
+static const char PKIM_CVS_ID[] = "@(#) $RCSfile: pkim.h,v $ $Revision: 1.30 $ $Date: 2007/11/16 05:29:27 $";
 #endif /* DEBUG */
 
 #ifndef BASE_H
@@ -654,7 +654,7 @@ NSS_EXTERN NSSCertificate **
 nssTrustDomain_GetCertsForNicknameFromCache
 (
   NSSTrustDomain *td,
-  NSSUTF8 *nickname,
+  const NSSUTF8 *nickname,
   nssList *certListOpt
 );
 

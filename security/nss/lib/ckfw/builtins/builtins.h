@@ -35,7 +35,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #ifdef DEBUG
-static const char BUILTINS_CVS_ID[] = "@(#) $RCSfile: builtins.h,v $ $Revision: 1.5.28.1 $ $Date: 2008/01/24 21:16:51 $";
+static const char BUILTINS_CVS_ID[] = "@(#) $RCSfile: builtins.h,v $ $Revision: 1.6 $ $Date: 2008/01/23 07:34:49 $";
 #endif /* DEBUG */
 
 #include "nssckmdt.h"

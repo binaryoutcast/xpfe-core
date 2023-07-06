@@ -1,0 +1,5 @@
+Adding client.mk options from /home/robert/tinderbox/release-SeaMonkey-1.1/mozconfig:
+    MOZ_OBJDIR=../build
+    MOZ_CO_PROJECT=suite
+    MOZILLA_OFFICIAL=1
+    BUILD_OFFICIAL=1

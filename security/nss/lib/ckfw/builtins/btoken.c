@@ -35,7 +35,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #ifdef DEBUG
-static const char CVS_ID[] = "@(#) $RCSfile: btoken.c,v $ $Revision: 1.3.28.1 $ $Date: 2008/01/24 21:16:51 $";
+static const char CVS_ID[] = "@(#) $RCSfile: btoken.c,v $ $Revision: 1.4 $ $Date: 2008/01/23 07:34:49 $";
 #endif /* DEBUG */
 
 #include "builtins.h"

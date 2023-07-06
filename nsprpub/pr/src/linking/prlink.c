@@ -44,7 +44,7 @@
 #include <image.h>
 #endif
 
-#ifdef XP_MACOSX
+#if defined(XP_MACOSX) && defined(USE_MACH_DYLD)
 #include <CodeFragments.h>
 #include <TextUtils.h>
 #include <Types.h>
@@ -155,8 +155,8 @@ struct _imcb *IAC$GL_IMAGE_LIST = NULL;
 /*
  * On these platforms, symbols have a leading '_'.
  */
-#if defined(SUNOS4) || defined(DARWIN) || defined(NEXTSTEP) \
-    || defined(WIN16) || defined(XP_OS2) \
+#if defined(SUNOS4) || (defined(DARWIN) && defined(USE_MACH_DYLD)) \
+    || defined(NEXTSTEP) || defined(WIN16) || defined(XP_OS2) \
     || ((defined(OPENBSD) || defined(NETBSD)) && !defined(__ELF__))
 #define NEED_LEADING_UNDERSCORE
 #endif
@@ -179,7 +179,7 @@ struct PRLibrary {
 #endif
 #endif
 
-#ifdef XP_MACOSX
+#if defined(XP_MACOSX) && defined(USE_MACH_DYLD)
     CFragConnectionID           connection;
     CFBundleRef                 bundle;
     Ptr                         main;
@@ -223,15 +223,7 @@ static int pr_ConvertUTF16toUTF8(LPCWSTR wname, LPSTR name, int len);
 /************************************************************************/
 
 #if !defined(USE_DLFCN) && !defined(HAVE_STRERROR)
-static char* errStrBuf = NULL;
 #define ERR_STR_BUF_LENGTH    20
-static char* errno_string(PRIntn oserr)
-{
-    if (errStrBuf == NULL)
-        errStrBuf = PR_MALLOC(ERR_STR_BUF_LENGTH);
-    PR_snprintf(errStrBuf, ERR_STR_BUF_LENGTH, "error %d", oserr);
-    return errStrBuf;
-}
 #endif
 
 static void DLLErrorInternal(PRIntn oserr)
@@ -247,7 +239,9 @@ static void DLLErrorInternal(PRIntn oserr)
 #elif defined(HAVE_STRERROR)
     error = strerror(oserr);  /* this should be okay */
 #else
-    error = errno_string(oserr);
+    char errStrBuf[ERR_STR_BUF_LENGTH];
+    PR_snprintf(errStrBuf, sizeof(errStrBuf), "error %d", oserr);
+    error = errStrBuf;
 #endif
     if (NULL != error)
         PR_SetErrorText(strlen(error), error);
@@ -382,10 +376,6 @@ void _PR_ShutdownLinker(void)
         free(_pr_currentLibPath);
         _pr_currentLibPath = NULL;
     }
-
-#if !defined(USE_DLFCN) && !defined(HAVE_STRERROR)
-    PR_DELETE(errStrBuf);
-#endif
 }
 #endif
 
@@ -629,7 +619,24 @@ pr_LoadMachDyldModule(const char *name)
 }
 #endif
 
-#ifdef XP_MACOSX
+#if defined(XP_MACOSX) && defined(USE_MACH_DYLD)
+
+/*
+** macLibraryLoadProc is a function definition for a Mac shared library
+** loading method. The "name" param is the same full or partial pathname
+** that was passed to pr_LoadLibraryByPathName. The function must fill
+** in the fields of "lm" which apply to its library type. Returns
+** PR_SUCCESS if successful.
+*/
+
+typedef PRStatus (*macLibraryLoadProc)(const char *name, PRLibrary *lm);
+
+#ifdef __ppc__
+
+/*
+** CFM and its TVectors only exist on PowerPC.  Other OS X architectures
+** only use Mach-O as a native binary format.
+*/
 
 static void* TV2FP(CFMutableDictionaryRef dict, const char* name, void *tvp)
 {
@@ -664,16 +671,6 @@ static void* TV2FP(CFMutableDictionaryRef dict, const char* name, void *tvp)
     
     return newGlue;
 }
-
-/*
-** macLibraryLoadProc is a function definition for a Mac shared library
-** loading method. The "name" param is the same full or partial pathname
-** that was passed to pr_LoadLibraryByPathName. The function must fill
-** in the fields of "lm" which apply to its library type. Returns
-** PR_SUCCESS if successful.
-*/
-
-typedef PRStatus (*macLibraryLoadProc)(const char *name, PRLibrary *lm);
 
 static PRStatus
 pr_LoadViaCFM(const char *name, PRLibrary *lm)
@@ -723,6 +720,7 @@ pr_LoadViaCFM(const char *name, PRLibrary *lm)
     }
     return (err == noErr) ? PR_SUCCESS : PR_FAILURE;
 }
+#endif /* __ppc__ */
 
 /*
 ** Creates a CFBundleRef if the pathname refers to a Mac OS X bundle
@@ -766,15 +764,21 @@ pr_LoadViaDyld(const char *name, PRLibrary *lm)
     if (lm->dlh == NULL) {
         lm->image = NSAddImage(name, NSADDIMAGE_OPTION_RETURN_ON_ERROR
                                | NSADDIMAGE_OPTION_WITH_SEARCHING);
-        /*
-         * TODO: If NSAddImage fails, use NSLinkEditError to retrieve
-         * error information.
-         */
+        if (lm->image == NULL) {
+            NSLinkEditErrors linkEditError;
+            int errorNum;
+            const char *errorString;
+            const char *fileName;
+            NSLinkEditError(&linkEditError, &errorNum, &fileName, &errorString);
+            PR_LOG(_pr_linker_lm, PR_LOG_MIN, 
+                   ("LoadMachDyldModule error %d:%d for file %s:\n%s",
+                    linkEditError, errorNum, fileName, errorString));
+        }
     }
     return (lm->dlh != NULL || lm->image != NULL) ? PR_SUCCESS : PR_FAILURE;
 }
 
-#endif /* XP_MACOSX */
+#endif /* XP_MACOSX && USE_MACH_DYLD */
 
 #ifdef WIN95
 static HMODULE WINAPI
@@ -912,13 +916,17 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
     }
 #endif /* WIN32 || WIN16 */
 
-#ifdef XP_MACOSX
+#if defined(XP_MACOSX) && defined(USE_MACH_DYLD)
     {
     int     i;
     PRStatus status;
 
     static const macLibraryLoadProc loadProcs[] = {
+#ifdef __ppc__
         pr_LoadViaDyld, pr_LoadCFBundle, pr_LoadViaCFM
+#else  /* __ppc__ */
+        pr_LoadViaDyld, pr_LoadCFBundle
+#endif /* __ppc__ */
     };
 
     for (i = 0; i < sizeof(loadProcs) / sizeof(loadProcs[0]); i++) {
@@ -936,7 +944,7 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
     }
 #endif
 
-#if defined(XP_UNIX) && !defined(XP_MACOSX)
+#if defined(XP_UNIX) && !(defined(XP_MACOSX) && defined(USE_MACH_DYLD))
 #ifdef HAVE_DLL
     {
 #if defined(USE_DLFCN)
@@ -1000,7 +1008,7 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
     pr_loadmap = lm;
     }
 #endif /* HAVE_DLL */
-#endif /* XP_UNIX */
+#endif /* XP_UNIX && !(XP_MACOSX && USE_MACH_DYLD) */
 
     lm->refCount = 1;
 
@@ -1281,7 +1289,7 @@ PR_UnloadLibrary(PRLibrary *lib)
     }
 #endif  /* XP_PC */
 
-#ifdef XP_MACOSX
+#if defined(XP_MACOSX) && defined(USE_MACH_DYLD)
     /* Close the connection */
     if (lib->connection)
         CloseConnection(&(lib->connection));
@@ -1380,7 +1388,7 @@ pr_FindSymbolInLib(PRLibrary *lm, const char *name)
     f = GetProcAddress(lm->dlh, name);
 #endif  /* WIN32 || WIN16 */
 
-#ifdef XP_MACOSX
+#if defined(XP_MACOSX) && defined(USE_MACH_DYLD)
 /* add this offset to skip the leading underscore in name */
 #define SYM_OFFSET 1
     if (lm->bundle) {
@@ -1401,10 +1409,12 @@ pr_FindSymbolInLib(PRLibrary *lm, const char *name)
         
         f = (FindSymbol(lm->connection, pName, &symAddr, &symClass) == noErr) ? symAddr : NULL;
         
+#ifdef __ppc__
         /* callers expect mach-o function pointers, so must wrap tvectors with glue. */
         if (f && symClass == kTVectorCFragSymbol) {
             f = TV2FP(lm->wrappers, name + SYM_OFFSET, f);
         }
+#endif /* __ppc__ */
         
         if (f == NULL && strcmp(name + SYM_OFFSET, "main") == 0) f = lm->main;
     }
@@ -1419,7 +1429,7 @@ pr_FindSymbolInLib(PRLibrary *lm, const char *name)
             f = NULL;
     }
 #undef SYM_OFFSET
-#endif /* XP_MACOSX */
+#endif /* XP_MACOSX && USE_MACH_DYLD */
 
 #ifdef XP_BEOS
     if( B_NO_ERROR != get_image_symbol( (image_id)lm->dlh, name, B_SYMBOL_TYPE_TEXT, &f ) ) {
@@ -1597,8 +1607,8 @@ PR_LoadStaticLibrary(const char *name, const PRStaticLinkTable *slt)
 
     result = lm;    /* success */
     PR_ASSERT(lm->refCount == 1);
-  unlock:
     PR_LOG(_pr_linker_lm, PR_LOG_MIN, ("Loaded library %s (static lib)", lm->name));
+  unlock:
     PR_ExitMonitor(pr_linker_lock);
     return result;
 }
@@ -1606,7 +1616,9 @@ PR_LoadStaticLibrary(const char *name, const PRStaticLinkTable *slt)
 PR_IMPLEMENT(char *)
 PR_GetLibraryFilePathname(const char *name, PRFuncPtr addr)
 {
-#if defined(SOLARIS) || defined(LINUX) || defined(FREEBSD)
+#if defined(USE_DLFCN) && (defined(SOLARIS) || defined(FREEBSD) \
+        || defined(LINUX) || defined(__GNU__) || defined(__GLIBC__) \
+        || defined(DARWIN))
     Dl_info dli;
     char *result;
 
@@ -1622,7 +1634,7 @@ PR_GetLibraryFilePathname(const char *name, PRFuncPtr addr)
     return result;
 #elif defined(USE_MACH_DYLD)
     char *result;
-    char *image_name;
+    const char *image_name;
     int i, count = _dyld_image_count();
 
     for (i = 0; i < count; i++) {

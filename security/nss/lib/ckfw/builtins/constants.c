@@ -35,7 +35,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #ifdef DEBUG
-static const char CVS_ID[] = "@(#) $RCSfile: constants.c,v $ $Revision: 1.10.28.2 $ $Date: 2008/01/24 21:16:52 $";
+static const char CVS_ID[] = "@(#) $RCSfile: constants.c,v $ $Revision: 1.13 $ $Date: 2008/01/23 07:34:49 $";
 #endif /* DEBUG */
 
 /*
@@ -76,22 +76,22 @@ nss_builtins_FirmwareVersion = {
 	NSS_BUILTINS_FIRMWARE_VERSION_MAJOR,
 	NSS_BUILTINS_FIRMWARE_VERSION_MINOR };
 
-const NSSUTF8
+const NSSUTF8 
 nss_builtins_ManufacturerID[] = { "Mozilla Foundation" };
 
-const NSSUTF8
+const NSSUTF8 
 nss_builtins_LibraryDescription[] = { "NSS Builtin Object Cryptoki Module" };
 
-const NSSUTF8
+const NSSUTF8 
 nss_builtins_SlotDescription[] = { "NSS Builtin Objects" };
 
-const NSSUTF8
+const NSSUTF8 
 nss_builtins_TokenLabel[] = { "Builtin Object Token" };
 
-const NSSUTF8
+const NSSUTF8 
 nss_builtins_TokenModel[] = { "1" };
 
 /* should this be e.g. the certdata.txt RCS revision number? */
-const NSSUTF8
+const NSSUTF8 
 nss_builtins_TokenSerialNumber[] = { "1" };
 

@@ -90,7 +90,7 @@ PR_BEGIN_EXTERN_C
 #elif defined(IRIX)
 #include "md/_irix.h"
 
-#elif defined(LINUX)
+#elif defined(LINUX) || defined(__GNU__) || defined(__GLIBC__)
 #include "md/_linux.h"
 
 #elif defined(OSF1)
@@ -140,6 +140,9 @@ PR_BEGIN_EXTERN_C
 
 #elif defined(RISCOS)
 #include "md/_riscos.h"
+
+#elif defined(SYMBIAN)
+#include "md/_symbian.h"
 
 #else
 #error unknown Unix flavor

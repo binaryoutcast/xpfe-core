@@ -35,7 +35,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #ifdef DEBUG
-static const char CVS_ID[] = "@(#) $RCSfile: pkibase.c,v $ $Revision: 1.25.28.3 $ $Date: 2007/11/21 18:07:52 $";
+static const char CVS_ID[] = "@(#) $RCSfile: pkibase.c,v $ $Revision: 1.30 $ $Date: 2008/01/21 23:20:19 $";
 #endif /* DEBUG */
 
 #ifndef DEV_H
@@ -847,10 +847,7 @@ nssPKIObjectCollection_AddInstances (
     PRBool foundIt;
     pkiObjectCollectionNode *node;
     if (instances) {
-	for (; *instances; instances++, i++) {
-	    if (numInstances > 0 && i == numInstances) {
-		break;
-	    }
+	while ((!numInstances || i < numInstances) && *instances) {
 	    if (status == PR_SUCCESS) {
 		node = add_object_instance(collection, *instances, &foundIt);
 		if (node == NULL) {
@@ -861,6 +858,8 @@ nssPKIObjectCollection_AddInstances (
 	    } else {
 		nssCryptokiObject_Destroy(*instances);
 	    }
+	    instances++;
+	    i++;
 	}
     }
     return status;
@@ -1142,6 +1141,10 @@ crl_getUIDFromObject(nssPKIObject *o, NSSItem *uid)
     NSSCRL *crl = (NSSCRL *)o;
     NSSDER *encoding;
     encoding = nssCRL_GetEncoding(crl);
+    if (!encoding) {
+        nss_SetError(NSS_ERROR_INVALID_ARGUMENT);
+        return PR_FALSE;
+    }
     uid[0] = *encoding;
     uid[1].data = NULL; uid[1].size = 0;
     return PR_SUCCESS;

@@ -161,20 +161,42 @@
 #define PR_CALLBACK_DECL
 #define PR_STATIC_CALLBACK(__x) static __x
 
-#elif defined(XP_OS2_VACPP) 
+#elif defined(XP_OS2) && defined(__declspec)
 
-#define PR_EXPORT(__type) extern __type
-#define PR_EXPORT_DATA(__type) extern __type
-#define PR_IMPORT(__type) extern __type
-#define PR_IMPORT_DATA(__type) extern __type
+#define PR_EXPORT(__type) extern __declspec(dllexport) __type
+#define PR_EXPORT_DATA(__type) extern __declspec(dllexport) __type
+#define PR_IMPORT(__type) extern  __declspec(dllimport) __type
+#define PR_IMPORT_DATA(__type) extern __declspec(dllimport) __type
+
+#define PR_EXTERN(__type) extern __declspec(dllexport) __type
+#define PR_IMPLEMENT(__type) __declspec(dllexport) __type
+#define PR_EXTERN_DATA(__type) extern __declspec(dllexport) __type
+#define PR_IMPLEMENT_DATA(__type) __declspec(dllexport) __type
+
+#define PR_CALLBACK
+#define PR_CALLBACK_DECL
+#define PR_STATIC_CALLBACK(__x) static __x
+
+#elif defined(SYMBIAN)
+
+#define PR_EXPORT(__type) extern __declspec(dllexport) __type
+#define PR_EXPORT_DATA(__type) extern __declspec(dllexport) __type
+#ifdef __WINS__
+#define PR_IMPORT(__type) extern __declspec(dllexport) __type
+#define PR_IMPORT_DATA(__type) extern __declspec(dllexport) __type
+#else
+#define PR_IMPORT(__type) extern __declspec(dllimport) __type
+#define PR_IMPORT_DATA(__type) extern __declspec(dllimport) __type
+#endif
 
 #define PR_EXTERN(__type) extern __type
 #define PR_IMPLEMENT(__type) __type
 #define PR_EXTERN_DATA(__type) extern __type
 #define PR_IMPLEMENT_DATA(__type) __type
-#define PR_CALLBACK _Optlink
+
+#define PR_CALLBACK
 #define PR_CALLBACK_DECL
-#define PR_STATIC_CALLBACK(__x) static __x PR_CALLBACK
+#define PR_STATIC_CALLBACK(__x) static __x
 
 #else /* Unix */
 
@@ -365,7 +387,13 @@ typedef long PRInt32;
 **      the LL_ macros (see prlong.h).
 ************************************************************************/
 #ifdef HAVE_LONG_LONG
-#if PR_BYTES_PER_LONG == 8
+/* Keep this in sync with prlong.h. */
+/*
+ * On 64-bit Mac OS X, uint64 needs to be defined as unsigned long long to
+ * match uint64_t, otherwise our uint64 typedef conflicts with the uint64
+ * typedef in cssmconfig.h, which CoreServices.h includes indirectly.
+ */
+#if PR_BYTES_PER_LONG == 8 && !defined(__APPLE__)
 typedef long PRInt64;
 typedef unsigned long PRUint64;
 #elif defined(WIN16)
@@ -442,7 +470,11 @@ typedef ptrdiff_t PRPtrdiff;
 **  A type for pointer difference. Variables of this type are suitable
 **      for storing a pointer or pointer sutraction. 
 ************************************************************************/
+#ifdef _WIN64
+typedef unsigned __int64 PRUptrdiff;
+#else
 typedef unsigned long PRUptrdiff;
+#endif
 
 /************************************************************************
 ** TYPES:       PRBool
@@ -490,8 +522,13 @@ typedef PRUint16 PRUnichar;
 ** Specification, Addison-Wesley, September 1996.
 ** http://java.sun.com/docs/books/vmspec/index.html.)
 */
+#ifdef _WIN64
+typedef __int64 PRWord;
+typedef unsigned __int64 PRUword;
+#else
 typedef long PRWord;
 typedef unsigned long PRUword;
+#endif
 
 #if defined(NO_NSPR_10_SUPPORT)
 #else

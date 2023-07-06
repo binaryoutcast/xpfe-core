@@ -388,6 +388,17 @@ nsBaseURLParser::ParseFileName(const char *filename, PRInt32 filenameLen,
 // nsNoAuthURLParser implementation
 //----------------------------------------------------------------------------
 
+NS_IMETHODIMP
+nsNoAuthURLParser::ParseAuthority(const char *auth, PRInt32 authLen,
+                                 PRUint32 *usernamePos, PRInt32 *usernameLen,
+                                 PRUint32 *passwordPos, PRInt32 *passwordLen,
+                                 PRUint32 *hostnamePos, PRInt32 *hostnameLen,
+                                 PRInt32 *port)
+{
+    NS_NOTREACHED("Shouldn't parse auth in a NoAuthURL!");
+    return NS_ERROR_UNEXPECTED;
+}
+
 void
 nsNoAuthURLParser::ParseAfterScheme(const char *spec, PRInt32 specLen,
                                     PRUint32 *authPos, PRInt32 *authLen,
@@ -419,11 +430,11 @@ nsNoAuthURLParser::ParseAfterScheme(const char *spec, PRInt32 specLen,
                 p = (const char *) memchr(spec + 2, '/', specLen - 2);
             }
             if (p) {
-                SET_RESULT(auth, 2, p - (spec + 2));
+                SET_RESULT(auth, 0, -1);
                 SET_RESULT(path, p - spec, specLen - (p - spec));
             }
             else {
-                SET_RESULT(auth, 2, specLen - 2);
+                SET_RESULT(auth, 0, -1);
                 SET_RESULT(path, 0, -1);
             }
             return;
@@ -603,10 +614,15 @@ nsAuthURLParser::ParseServerInfo(const char *serverinfo, PRInt32 serverinfoLen,
         if (port) {
             // XXX unfortunately ToInteger is not defined for substrings
             nsCAutoString buf(colon+1, serverinfoLen - (colon + 1 - serverinfo));
-            PRInt32 err;
-           *port = buf.ToInteger(&err);
-            if (NS_FAILED(err))
-               *port = -1;
+            if (buf.Length() == 0) {
+                *port = -1;
+            }
+            else {
+                PRInt32 err;
+                *port = buf.ToInteger(&err);
+                if (NS_FAILED(err))
+                    return NS_ERROR_MALFORMED_URI;
+            }
         }
     }
     else {

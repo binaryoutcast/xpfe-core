@@ -143,10 +143,15 @@
 	(!memcmp(&(t), &pt_zero_tid, sizeof(pthread_t)))
 #define _PT_PTHREAD_COPY_THR_HANDLE(st, dt)   (dt) = (st)
 #elif defined(IRIX) || defined(OSF1) || defined(AIX) || defined(SOLARIS) \
-	|| defined(HPUX) || defined(LINUX) || defined(FREEBSD) \
+	|| defined(LINUX) || defined(__GNU__) || defined(__GLIBC__) \
+	|| defined(HPUX) || defined(FREEBSD) \
 	|| defined(NETBSD) || defined(OPENBSD) || defined(BSDI) \
 	|| defined(VMS) || defined(NTO) || defined(DARWIN) \
-	|| defined(UNIXWARE) || defined(RISCOS)
+	|| defined(UNIXWARE) || defined(RISCOS)	|| defined(SYMBIAN)
+#ifdef __GNU__
+/* Hurd pthreads don't have an invalid value for pthread_t. -- rmh */
+#error Using Hurd pthreads
+#endif
 #define _PT_PTHREAD_INVALIDATE_THR_HANDLE(t)  (t) = 0
 #define _PT_PTHREAD_THR_HANDLE_IS_INVALID(t)  (t) == 0
 #define _PT_PTHREAD_COPY_THR_HANDLE(st, dt)   (dt) = (st)
@@ -195,10 +200,11 @@
 /*
  * These platforms don't have sigtimedwait()
  */
-#if (defined(AIX) && !defined(AIX4_3_PLUS)) || defined(LINUX) \
+#if (defined(AIX) && !defined(AIX4_3_PLUS)) \
+	|| defined(LINUX) || defined(__GNU__)|| defined(__GLIBC__) \
 	|| defined(FREEBSD) || defined(NETBSD) || defined(OPENBSD) \
 	|| defined(BSDI) || defined(VMS) || defined(UNIXWARE) \
-	|| defined(DARWIN)
+	|| defined(DARWIN) || defined(SYMBIAN)
 #define PT_NO_SIGTIMEDWAIT
 #endif
 
@@ -228,7 +234,8 @@
 #define PT_PRIO_MAX            sched_get_priority_max(SCHED_OTHER)
 #endif /* defined(_PR_DCETHREADS) */
 
-#elif defined(LINUX) || defined(FREEBSD)
+#elif defined(LINUX) || defined(__GNU__) || defined(__GLIBC__) \
+	|| defined(FREEBSD) || defined(SYMBIAN)
 #define PT_PRIO_MIN            sched_get_priority_min(SCHED_OTHER)
 #define PT_PRIO_MAX            sched_get_priority_max(SCHED_OTHER)
 #elif defined(NTO)
@@ -284,10 +291,11 @@ extern int (*_PT_aix_yield_fcn)();
 		onemillisec.tv_nsec = 1000000L;			\
         nanosleep(&onemillisec,NULL);			\
     PR_END_MACRO
-#elif defined(HPUX) || defined(LINUX) || defined(SOLARIS) \
+#elif defined(HPUX) || defined(SOLARIS) \
+	|| defined(LINUX) || defined(__GNU__) || defined(__GLIBC__) \
 	|| defined(FREEBSD) || defined(NETBSD) || defined(OPENBSD) \
 	|| defined(BSDI) || defined(NTO) || defined(DARWIN) \
-	|| defined(UNIXWARE) || defined(RISCOS)
+	|| defined(UNIXWARE) || defined(RISCOS) || defined(SYMBIAN)
 #define _PT_PTHREAD_YIELD()            	sched_yield()
 #else
 #error "Need to define _PT_PTHREAD_YIELD for this platform"

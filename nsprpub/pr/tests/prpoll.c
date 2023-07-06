@@ -39,10 +39,6 @@
 #include <windows.h>
 #endif
 
-#ifdef XP_OS2_VACPP
-#include <io.h>      /* for close() */
-#endif
-
 #ifdef XP_UNIX
 #include <unistd.h>  /* for close() */
 #endif
@@ -100,8 +96,9 @@ int main(int argc, char **argv)
     PRPollDesc pds0[10], pds1[10], *pds, *other_pds;
     PRIntn npds;
     PRInt32 retVal;
-    PRInt32 sd, rv;
-	struct sockaddr_in saddr;
+    PRInt32 rv;
+    PROsfd sd;
+    struct sockaddr_in saddr;
     PRIntn saddr_len;
     PRUint16 listenPort3;
     PRFileDesc *socket_poll_fd;
@@ -286,7 +283,7 @@ int main(int argc, char **argv)
 
 				nEvents++;
 				if (j == 2) {
-					int newsd;
+					PROsfd newsd;
 					newsd = accept(PR_FileDesc2NativeHandle(pds[j].fd), NULL, 0);
 					if (newsd == -1) {
 						fprintf(stderr, "accept() failed\n");
