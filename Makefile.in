@@ -302,10 +302,6 @@ endif
 # tier 99 - application features
 #
 
-ifdef MOZ_MAIL_NEWS
-tier_99_dirs	+= mailnews
-endif
-
 ifdef MOZ_CALENDAR
 tier_99_dirs	+= calendar
 endif
