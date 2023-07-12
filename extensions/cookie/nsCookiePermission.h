@@ -59,9 +59,6 @@ public:
     : mCookiesLifetimeSec(LL_MAXINT)
     , mCookiesLifetimePolicy(0) // ACCEPT_NORMALLY
     , mCookiesAlwaysAcceptSession(PR_FALSE)
-#ifdef MOZ_MAIL_NEWS
-    , mCookiesDisabledForMailNews(PR_TRUE)
-#endif
     {}
   virtual ~nsCookiePermission() {}
 
@@ -74,10 +71,6 @@ private:
   nsInt64      mCookiesLifetimeSec;            // lifetime limit specified in seconds
   PRUint8      mCookiesLifetimePolicy;         // pref for how long cookies are stored
   PRPackedBool mCookiesAlwaysAcceptSession;    // don't prompt for session cookies
-#ifdef MOZ_MAIL_NEWS
-  PRPackedBool mCookiesDisabledForMailNews;
-#endif
-
 };
 
 // {CE002B28-92B7-4701-8621-CC925866FB87}

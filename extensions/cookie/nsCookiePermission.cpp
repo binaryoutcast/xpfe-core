@@ -75,9 +75,6 @@ static const PRBool kDefaultPolicy = PR_TRUE;
 static const char kCookiesLifetimePolicy[] = "network.cookie.lifetimePolicy";
 static const char kCookiesLifetimeDays[] = "network.cookie.lifetime.days";
 static const char kCookiesAlwaysAcceptSession[] = "network.cookie.alwaysAcceptSessionCookies";
-#ifdef MOZ_MAIL_NEWS
-static const char kCookiesDisabledForMailNews[] = "network.cookie.disableCookieForMailNews";
-#endif
 
 static const char kCookiesPrefsMigrated[] = "network.cookie.prefsMigrated";
 // obsolete pref names for migration
@@ -91,22 +88,6 @@ static const char kPermissionType[] = "cookie";
 // classes are lacking so we need them for now. see bug 198694.
 #define USEC_PER_SEC   (nsInt64(1000000))
 #define NOW_IN_SECONDS (nsInt64(PR_Now()) / USEC_PER_SEC)
-
-#ifdef MOZ_MAIL_NEWS
-// returns PR_TRUE if URI appears to be the URI of a mailnews protocol
-static PRBool
-IsFromMailNews(nsIURI *aURI)
-{
-  static const char *kMailNewsProtocols[] =
-      { "imap", "news", "snews", "mailbox", nsnull };
-  PRBool result;
-  for (const char **p = kMailNewsProtocols; *p; ++p) {
-    if (NS_SUCCEEDED(aURI->SchemeIs(*p, &result)) && result)
-      return PR_TRUE;
-  }
-  return PR_FALSE;
-}
-#endif
 
 NS_IMPL_ISUPPORTS2(nsCookiePermission,
                    nsICookiePermission,
@@ -126,9 +107,6 @@ nsCookiePermission::Init()
     prefBranch->AddObserver(kCookiesLifetimePolicy, this, PR_FALSE);
     prefBranch->AddObserver(kCookiesLifetimeDays, this, PR_FALSE);
     prefBranch->AddObserver(kCookiesAlwaysAcceptSession, this, PR_FALSE);
-#ifdef MOZ_MAIL_NEWS
-    prefBranch->AddObserver(kCookiesDisabledForMailNews, this, PR_FALSE);
-#endif
     PrefChanged(prefBranch, nsnull);
 
     // migration code for original cookie prefs
@@ -182,12 +160,6 @@ nsCookiePermission::PrefChanged(nsIPrefBranch *aPrefBranch,
   if (PREF_CHANGED(kCookiesAlwaysAcceptSession) &&
       NS_SUCCEEDED(aPrefBranch->GetBoolPref(kCookiesAlwaysAcceptSession, &val)))
     mCookiesAlwaysAcceptSession = val;
-
-#ifdef MOZ_MAIL_NEWS
-  if (PREF_CHANGED(kCookiesDisabledForMailNews) &&
-      NS_SUCCEEDED(aPrefBranch->GetBoolPref(kCookiesDisabledForMailNews, &val)))
-    mCookiesDisabledForMailNews = val;
-#endif
 }
 
 NS_IMETHODIMP
@@ -208,46 +180,6 @@ nsCookiePermission::CanAccess(nsIURI         *aURI,
                               nsIChannel     *aChannel,
                               nsCookieAccess *aResult)
 {
-#ifdef MOZ_MAIL_NEWS
-  // disable cookies in mailnews if user's prefs say so
-  if (mCookiesDisabledForMailNews) {
-    //
-    // try to examine the "app type" of the docshell owning this request.  if
-    // we find a docshell in the heirarchy of type APP_TYPE_MAIL, then assume
-    // this URI is being loaded from within mailnews.
-    //
-    // XXX this is a pretty ugly hack at the moment since cookies really
-    // shouldn't have to talk to the docshell directly.  ultimately, we want
-    // to talk to some more generic interface, which the docshell would also
-    // implement.  but, the basic mechanism here of leveraging the channel's
-    // (or loadgroup's) notification callbacks attribute seems ideal as it
-    // avoids the problem of having to modify all places in the code which
-    // kick off network requests.
-    //
-    PRUint32 appType = nsIDocShell::APP_TYPE_UNKNOWN;
-    if (aChannel) {
-      nsCOMPtr<nsIDocShellTreeItem> item, parent;
-      NS_QueryNotificationCallbacks(aChannel, parent);
-      if (parent) {
-        do {
-            item = parent;
-            nsCOMPtr<nsIDocShell> docshell = do_QueryInterface(item);
-            if (docshell)
-              docshell->GetAppType(&appType);
-        } while (appType != nsIDocShell::APP_TYPE_MAIL &&
-                 NS_SUCCEEDED(item->GetParent(getter_AddRefs(parent))) &&
-                 parent);
-      }
-    }
-    if ((appType == nsIDocShell::APP_TYPE_MAIL) ||
-        (aFirstURI && IsFromMailNews(aFirstURI)) ||
-        IsFromMailNews(aURI)) {
-      *aResult = ACCESS_DENY;
-      return NS_OK;
-    }
-  }
-#endif // MOZ_MAIL_NEWS
-  
   // finally, check with permission manager...
   nsresult rv = mPermMgr->TestPermission(aURI, kPermissionType, (PRUint32 *) aResult);
   if (NS_SUCCEEDED(rv)) {

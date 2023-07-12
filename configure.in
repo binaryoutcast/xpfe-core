@@ -4309,8 +4309,8 @@ case "$MOZ_BUILD_APP" in
 suite)
   MOZ_APP_NAME=seamonkey
   MOZ_APP_DISPLAYNAME=SeaMonkey
-  MOZ_MAIL_NEWS=1
-  MOZ_LDAP_XPCOM=1
+  MOZ_MAIL_NEWS=
+  MOZ_LDAP_XPCOM=
   MOZ_COMPOSER=1
   MOZ_SUITE=1
   MOZ_PROFILESHARING=
@@ -4533,29 +4533,6 @@ if test "$MOZ_OLD_CALENDAR"; then
 fi
 
 AC_SUBST(MOZ_CALENDAR)
-
-dnl =========================================================
-dnl = Mail & News
-dnl =========================================================
-MOZ_ARG_DISABLE_BOOL(mailnews,
-[  --disable-mailnews      Disable building of mail & news components],
-    MOZ_MAIL_NEWS=,
-    MOZ_MAIL_NEWS=1 )
-AC_SUBST(MOZ_MAIL_NEWS)
-
-dnl ========================================================
-dnl static mail build off by default 
-dnl ========================================================
-MOZ_ARG_ENABLE_BOOL(static-mail,
-[  --enable-static-mail Enable static mail build support],
-    MOZ_STATIC_MAIL_BUILD=1,
-    MOZ_STATIC_MAIL_BUILD= )
-
-if test "$MOZ_STATIC_MAIL_BUILD"; then
-    AC_DEFINE(MOZ_STATIC_MAIL_BUILD)
-fi
-
-AC_SUBST(MOZ_STATIC_MAIL_BUILD)
 
 dnl =========================================================
 dnl = LDAP
